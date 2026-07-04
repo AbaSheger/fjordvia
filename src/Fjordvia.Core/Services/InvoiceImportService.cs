@@ -11,7 +11,8 @@ public sealed class InvoiceImportService(
     IInvoiceRepository invoices,
     IIntegrationLogRepository logs,
     IUnitOfWork unitOfWork,
-    ErpInvoiceMapper mapper)
+    ErpInvoiceMapper mapper,
+    IIntegrationMessagePublisher messagePublisher)
 {
     public Task<IReadOnlyCollection<Invoice>> ListAsync(CancellationToken cancellationToken) =>
         invoices.ListAsync(cancellationToken);
@@ -47,6 +48,17 @@ public sealed class InvoiceImportService(
             CompletedAt = DateTimeOffset.UtcNow
         }, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        await messagePublisher.PublishInvoiceImportedAsync(new InvoiceImportMessage(
+            mapping.Invoice.Id,
+            partner.Id,
+            mapping.Invoice.ExternalInvoiceNumber,
+            partner.Name,
+            partner.OrganizationNumber,
+            mapping.Invoice.Currency,
+            mapping.Invoice.TotalAmount,
+            "ERP",
+            "Accounting and CRM",
+            DateTimeOffset.UtcNow), cancellationToken);
 
         return mapping;
     }

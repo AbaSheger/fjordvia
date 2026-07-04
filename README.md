@@ -28,6 +28,8 @@ Fjordvia models that workflow with:
 - Docker Compose
 - GitHub Actions
 - Angular
+- Azure Service Bus
+- Azure Functions isolated worker
 
 ## Solution Structure
 
@@ -36,6 +38,8 @@ src/
   Fjordvia.Api/             ASP.NET Core controllers, DTOs, middleware, Swagger
   Fjordvia.Core/            Domain models, services, mapping logic, repository contracts
   Fjordvia.Infrastructure/  EF Core DbContext, repositories, seed data
+functions/
+  Fjordvia.Functions/       Azure Functions isolated worker for Service Bus messages
 tests/
   Fjordvia.Tests/           xUnit tests for mapping and retry behavior
 frontend/
@@ -155,6 +159,45 @@ The script uses `http://localhost:5131` by default. To target a different local 
 
 The smoke test checks that the API is reachable, reads business partners, imports a sample invoice for the first partner returned by the API, reads integration logs, and retries a failed integration log when one exists.
 
+## Azure Integration Mode
+
+Fjordvia supports an Azure-style asynchronous integration flow without requiring Azure for local development.
+
+```text
+Angular dashboard
+  -> Fjordvia.Api
+  -> Azure Service Bus queue
+  -> Fjordvia.Functions
+  -> SQL Server / Azure SQL
+```
+
+Local mode is the default. If Service Bus settings are missing, the API uses a local publisher that logs the invoice import message and keeps the existing synchronous API behavior unchanged. This means Docker SQL Server, Swagger, the Angular dashboard, and `scripts/smoke-test.ps1` continue to work without Azure resources.
+
+Azure Service Bus mode is enabled only when both settings are configured:
+
+```powershell
+$env:ServiceBus__ConnectionString="<your-service-bus-connection-string>"
+$env:ServiceBus__InvoiceImportQueueName="invoice-imports"
+```
+
+The same settings can be stored with user secrets for local development:
+
+```powershell
+dotnet user-secrets set "ServiceBus:ConnectionString" "<your-service-bus-connection-string>" --project src/Fjordvia.Api
+dotnet user-secrets set "ServiceBus:InvoiceImportQueueName" "invoice-imports" --project src/Fjordvia.Api
+```
+
+Do not commit real Service Bus connection strings. `src/Fjordvia.Api/appsettings.Development.example.json` and `functions/Fjordvia.Functions/local.settings.example.json` show the required setting names with placeholders only.
+
+To run the Azure Functions project later, install Azure Functions Core Tools, copy `functions/Fjordvia.Functions/local.settings.example.json` to `functions/Fjordvia.Functions/local.settings.json`, replace the placeholders, and run:
+
+```powershell
+cd functions/Fjordvia.Functions
+func start
+```
+
+The function listens for invoice import messages, deserializes the shared `InvoiceImportMessage` contract from `Fjordvia.Core`, and logs the invoice reference, partner, amount, source system, and target system. The current portfolio version demonstrates the queue handoff without deploying infrastructure.
+
 ## Build and Test
 
 ```powershell
@@ -268,16 +311,20 @@ Fjordvia uses a simple layered backend design:
 
 - `Fjordvia.Api` owns HTTP concerns: controllers, DTOs, Swagger metadata, and central error handling.
 - `Fjordvia.Core` owns business behavior: domain models, validation-oriented services, repository interfaces, retry rules, and ERP mapping logic.
-- `Fjordvia.Infrastructure` owns persistence: EF Core `DbContext`, SQL Server configuration, repositories, and local seed data.
+- `Fjordvia.Infrastructure` owns persistence and infrastructure adapters: EF Core `DbContext`, SQL Server configuration, repositories, local seed data, local message publishing, and Azure Service Bus publishing.
+- `Fjordvia.Functions` owns asynchronous message handling for invoice import messages in the Azure portfolio flow.
 
-The MVP avoids microservices and background workers. The retry endpoint marks failed integrations as `Pending`, which keeps the domain behavior visible without pretending to implement a full asynchronous processor.
+The local MVP remains simple and does not require cloud resources. The Azure portfolio path adds a Service Bus queue and Function project to demonstrate asynchronous integration handoff while keeping API contracts and local behavior stable.
 
 ## Azure Roadmap
 
+Implemented for portfolio demonstration:
+
+- Azure Service Bus for asynchronous integration messages
+- Azure Functions isolated worker for processing invoice import messages
+
 Future production-oriented improvements:
 
-- Azure Functions for background processing of pending integrations
-- Azure Service Bus for asynchronous integration messages
 - Azure SQL for managed production database hosting
 - Azure Key Vault for connection strings and secrets
 - Azure Monitor for logs, metrics, and operational dashboards

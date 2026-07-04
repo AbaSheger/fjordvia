@@ -4,6 +4,9 @@
     <Project Path="src/Fjordvia.Core/Fjordvia.Core.csproj" />
     <Project Path="src/Fjordvia.Infrastructure/Fjordvia.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/functions/">
+    <Project Path="functions/Fjordvia.Functions/Fjordvia.Functions.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Fjordvia.Tests/Fjordvia.Tests.csproj" />
   </Folder>
