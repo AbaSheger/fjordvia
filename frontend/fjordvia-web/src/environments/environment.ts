@@ -1,3 +1,3 @@
 export const environment = {
-  apiBaseUrl: 'http://localhost:5131'
+  apiBaseUrl: 'https://fjordvia-api-rg-2338120496.azurewebsites.net'
 };
