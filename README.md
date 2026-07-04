@@ -2,7 +2,7 @@
 
 Fjordvia is a Nordic-inspired B2B SaaS backend portfolio project for cloud-based business system integrations. It demonstrates a practical .NET backend that connects fictional ERP, accounting, CRM, warehouse, and finance workflows through REST APIs, data mapping, retry handling, integration logs, SQL Server persistence, and tests.
 
-This repository is backend-only. There is no frontend.
+This repository contains the backend API and a small Angular dashboard for demonstrating the integration workflow locally.
 
 ## Business Problem
 
@@ -27,6 +27,7 @@ Fjordvia models that workflow with:
 - xUnit
 - Docker Compose
 - GitHub Actions
+- Angular
 
 ## Solution Structure
 
@@ -37,6 +38,8 @@ src/
   Fjordvia.Infrastructure/  EF Core DbContext, repositories, seed data
 tests/
   Fjordvia.Tests/           xUnit tests for mapping and retry behavior
+frontend/
+  fjordvia-web/             Angular dashboard for local workflow demos
 ```
 
 ## Local Setup
@@ -94,6 +97,47 @@ https://localhost:7000/swagger
 ```
 
 Open `/swagger` in the browser for the local API URL shown in the terminal.
+
+## Angular Frontend
+
+The Angular dashboard lives in `frontend/fjordvia-web` and expects the API to run at `http://localhost:5131` by default.
+
+Install frontend dependencies:
+
+```powershell
+cd frontend/fjordvia-web
+npm install
+```
+
+Start the Angular development server:
+
+```powershell
+npm start
+```
+
+Open:
+
+```text
+http://localhost:4200
+```
+
+The dashboard shows business partner totals, integration log totals, completed and failed integration counts, a business partner table, an invoice import form, and an integration logs table with retry actions for failed logs.
+
+To build the frontend:
+
+```powershell
+npm run build
+```
+
+### Screenshot Checklist
+
+Use this checklist for a portfolio screenshot:
+
+- Dashboard cards show partner and integration counts.
+- Business partners table shows seeded partner data.
+- Invoice import form is visible with an existing partner selected.
+- Integration logs table shows status badges and retry buttons only for failed logs.
+- No browser console errors are present.
 
 ## Smoke Test
 

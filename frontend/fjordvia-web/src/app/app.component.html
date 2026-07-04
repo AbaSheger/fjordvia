@@ -1,0 +1,197 @@
+<main class="app-shell">
+  <header class="command-header">
+    <div class="brand-lockup">
+      <div class="brand-mark">F</div>
+      <div>
+        <strong>Fjordvia</strong>
+        <span>Invoice integration dashboard</span>
+      </div>
+    </div>
+
+    <div class="header-copy">
+      <h1>Integration operations dashboard</h1>
+      <p>Monitor invoice imports, review routing results, and retry failed integration work from the local API.</p>
+    </div>
+
+    <button type="button" class="secondary-button" (click)="refreshData()" [disabled]="isLoading()">
+      Refresh
+    </button>
+  </header>
+
+  <section class="workflow-strip" aria-label="Invoice integration workflow">
+    <div class="workflow-node">
+      <strong>ERP invoice</strong>
+      <small>Import request</small>
+    </div>
+    <div class="workflow-arrow" aria-hidden="true">-&gt;</div>
+    <div class="workflow-node active">
+      <strong>Fjordvia mapping</strong>
+      <small>Validate and transform</small>
+    </div>
+    <div class="workflow-arrow" aria-hidden="true">-&gt;</div>
+    <div class="workflow-node">
+      <strong>Accounting + CRM</strong>
+      <small>Target systems</small>
+    </div>
+    <div class="workflow-arrow" aria-hidden="true">-&gt;</div>
+    <div class="workflow-node">
+      <strong>Integration log</strong>
+      <small>Audit and retry</small>
+    </div>
+  </section>
+
+  <section class="metrics-grid" aria-label="Dashboard overview">
+    <article class="metric-card metric-card-primary">
+      <span>Business partners</span>
+      <strong>{{ businessPartners().length }}</strong>
+      <small>Available for invoice import</small>
+    </article>
+    <article class="metric-card">
+      <span>Activity logs</span>
+      <strong>{{ integrationLogs().length }}</strong>
+      <small>Backend integration records</small>
+    </article>
+    <article class="metric-card">
+      <span>Completed</span>
+      <strong>{{ completedIntegrations() }}</strong>
+      <small>Successful integration runs</small>
+    </article>
+    <article class="metric-card metric-card-alert">
+      <span>Failed</span>
+      <strong>{{ failedIntegrations() }}</strong>
+      <small>Eligible for retry</small>
+    </article>
+  </section>
+
+  <div *ngIf="message()" class="notice success">{{ message() }}</div>
+  <div *ngIf="error()" class="notice error">{{ error() }}</div>
+
+  <section class="panel logs-panel" id="integration-logs">
+    <div class="panel-heading">
+      <div>
+        <p class="section-kicker">Operations</p>
+        <h2>Latest integration logs</h2>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table *ngIf="integrationLogs().length > 0; else noLogs">
+        <thead>
+          <tr>
+            <th>Source</th>
+            <th>Target</th>
+            <th>Status</th>
+            <th>Retries</th>
+            <th>Reference</th>
+            <th>Message</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let log of latestIntegrationLogs()">
+            <td>{{ log.sourceSystem }}</td>
+            <td>{{ log.targetSystem }}</td>
+            <td><span [class]="statusClass(log.status)">{{ log.status }}</span></td>
+            <td>{{ log.retryCount }}</td>
+            <td class="mono-cell">{{ log.reference }}</td>
+            <td class="message-cell">{{ log.message || 'No message' }}</td>
+            <td class="action-cell">
+              <button
+                *ngIf="log.status === 'Failed'"
+                type="button"
+                class="retry-button"
+                (click)="retry(log)"
+              >
+                Retry
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <ng-template #noLogs>
+        <div class="empty-state">No integration logs available.</div>
+      </ng-template>
+    </div>
+  </section>
+
+  <section class="content-grid">
+    <article class="panel" id="partners">
+      <div class="panel-heading">
+        <div>
+          <p class="section-kicker">Partners</p>
+          <h2>Connected business partners</h2>
+        </div>
+      </div>
+      <div class="table-wrap partners-table">
+        <table *ngIf="businessPartners().length > 0; else noPartners">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Organization no.</th>
+              <th>Country</th>
+              <th>Email</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let partner of businessPartners()">
+              <td class="strong-cell">{{ partner.name }}</td>
+              <td class="mono-cell">{{ partner.organizationNumber }}</td>
+              <td><span class="country-chip">{{ partner.countryCode }}</span></td>
+              <td class="email-cell">{{ partner.email }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <ng-template #noPartners>
+          <div class="empty-state">No business partners available.</div>
+        </ng-template>
+      </div>
+    </article>
+
+    <article class="panel import-panel" id="invoice-import">
+      <div class="panel-heading">
+        <div>
+          <p class="section-kicker">Import</p>
+          <h2>Import invoice</h2>
+        </div>
+      </div>
+      <form class="invoice-form" (ngSubmit)="importInvoice()">
+        <label>
+          Business partner
+          <select name="businessPartnerId" [(ngModel)]="invoiceForm.businessPartnerId" required>
+            <option *ngFor="let partner of businessPartners()" [value]="partner.id">
+              {{ partner.name }}
+            </option>
+          </select>
+        </label>
+
+        <div class="form-row">
+          <label>
+            Invoice number
+            <input name="invoiceNumber" [(ngModel)]="invoiceForm.invoiceNumber" maxlength="80" required>
+          </label>
+          <label>
+            Currency
+            <input name="currency" [(ngModel)]="invoiceForm.currency" maxlength="3" required>
+          </label>
+        </div>
+
+        <label>
+          Line description
+          <input name="description" [(ngModel)]="invoiceForm.description" maxlength="240" required>
+        </label>
+
+        <div class="form-row">
+          <label>
+            Quantity
+            <input type="number" name="quantity" [(ngModel)]="invoiceForm.quantity" min="1" required>
+          </label>
+          <label>
+            Unit price
+            <input type="number" name="unitPrice" [(ngModel)]="invoiceForm.unitPrice" min="0" step="0.01" required>
+          </label>
+        </div>
+
+        <button type="submit" class="primary-button">Import invoice</button>
+      </form>
+    </article>
+  </section>
+</main>

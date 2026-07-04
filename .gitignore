@@ -8,3 +8,6 @@ TestResults/
 *.suo
 *.nupkg
 .env
+node_modules/
+dist/
+.angular/

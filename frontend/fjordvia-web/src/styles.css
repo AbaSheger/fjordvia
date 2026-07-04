@@ -1,0 +1,58 @@
+:root {
+  --fjordvia-bg: #eef3f5;
+  --fjordvia-surface: #ffffff;
+  --fjordvia-surface-muted: #f7fafb;
+  --fjordvia-border: #d8e1e5;
+  --fjordvia-border-strong: #b9c9d1;
+  --fjordvia-text: #17252f;
+  --fjordvia-text-muted: #5d7480;
+  --fjordvia-heading: #0f1d26;
+  --fjordvia-primary: #1f6f8b;
+  --fjordvia-primary-hover: #195e76;
+  --fjordvia-primary-soft: #d9eef4;
+  --fjordvia-accent: #244252;
+  --fjordvia-accent-soft: #e6edf0;
+  --fjordvia-success: #1d6b3a;
+  --fjordvia-success-soft: #edf8f1;
+  --fjordvia-warning: #84600d;
+  --fjordvia-warning-soft: #fff6df;
+  --fjordvia-danger: #9f2d2d;
+  --fjordvia-danger-soft: #fff1f1;
+  --fjordvia-info: #185e8a;
+  --fjordvia-info-soft: #eaf4fb;
+  --fjordvia-shadow: 0 10px 24px rgba(23, 37, 47, 0.06);
+  --fjordvia-font-sans: "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --fjordvia-font-mono: "SFMono-Regular", "Consolas", "Liberation Mono", monospace;
+  --fjordvia-space-1: 4px;
+  --fjordvia-space-2: 8px;
+  --fjordvia-space-3: 12px;
+  --fjordvia-space-4: 16px;
+  --fjordvia-space-5: 20px;
+  --fjordvia-space-6: 24px;
+  --fjordvia-space-8: 32px;
+  --fjordvia-space-10: 40px;
+  --fjordvia-space-12: 48px;
+  --fjordvia-shell-max-width: 1180px;
+  --fjordvia-shell-gutter: 16px;
+  --fjordvia-shell-radius: 8px;
+  --fjordvia-button-radius: 6px;
+  --fjordvia-button-height: 38px;
+}
+
+html {
+  background:
+    linear-gradient(135deg, rgba(31, 111, 139, 0.10), rgba(255, 255, 255, 0) 38%),
+    linear-gradient(180deg, var(--fjordvia-surface-muted), var(--fjordvia-bg));
+  color: var(--fjordvia-text);
+  font-family: var(--fjordvia-font-sans);
+}
+
+body {
+  margin: 0;
+}
+
+button,
+input,
+select {
+  font-family: inherit;
+}
