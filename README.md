@@ -59,22 +59,32 @@ ACCEPT_EULA=Y
 MSSQL_SA_PASSWORD=<your-local-strong-password>
 ```
 
+The `.env` file is ignored by Git and must not be committed.
+
+Configure the API connection string locally. The recommended approach is an environment variable:
+
+```powershell
+$env:ConnectionStrings__FjordviaDatabase="Server=localhost,1433;Database=Fjordvia;User Id=sa;Password=<your-local-strong-password>;TrustServerCertificate=True;Encrypt=True"
+```
+
+Alternatively, copy the example development settings file and replace the placeholder password:
+
+```powershell
+Copy-Item src/Fjordvia.Api/appsettings.Development.example.json src/Fjordvia.Api/appsettings.Development.json
+```
+
+Do not commit real local passwords in `appsettings.Development.json`.
+
 Start SQL Server:
 
 ```powershell
 docker compose up -d
 ```
 
-Set the API connection string for your shell:
-
-```powershell
-$env:ConnectionStrings__FjordviaDatabase="Server=localhost,1433;Database=Fjordvia;User Id=sa;Password=<your-local-strong-password>;TrustServerCertificate=True;Encrypt=True"
-```
-
 Run the API:
 
 ```powershell
-dotnet run --project src/Fjordvia.Api/Fjordvia.Api.csproj
+dotnet run --project src/Fjordvia.Api
 ```
 
 In development, the API creates the database schema with EF Core `EnsureCreated` and inserts seed data. Swagger is available at the URL printed by `dotnet run`, usually:
@@ -82,6 +92,24 @@ In development, the API creates the database schema with EF Core `EnsureCreated`
 ```text
 https://localhost:7000/swagger
 ```
+
+Open `/swagger` in the browser for the local API URL shown in the terminal.
+
+## Smoke Test
+
+With SQL Server and the API running locally, run the PowerShell smoke test from the repository root:
+
+```powershell
+.\scripts\smoke-test.ps1
+```
+
+The script uses `http://localhost:5131` by default. To target a different local API URL:
+
+```powershell
+.\scripts\smoke-test.ps1 -BaseUrl "https://localhost:7000"
+```
+
+The smoke test checks that the API is reachable, reads business partners, imports a sample invoice for the first partner returned by the API, reads integration logs, and retries a failed integration log when one exists.
 
 ## Build and Test
 
