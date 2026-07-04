@@ -198,6 +198,168 @@ func start
 
 The function listens for invoice import messages, deserializes the shared `InvoiceImportMessage` contract from `Fjordvia.Core`, and logs the invoice reference, partner, amount, source system, and target system. The current portfolio version demonstrates the queue handoff without deploying infrastructure.
 
+## Azure Deployment
+
+Target deployment architecture:
+
+```text
+Angular local dashboard
+  -> Fjordvia.Api on Azure App Service
+  -> Azure Service Bus queue
+  -> Fjordvia.Functions on Azure Function App
+  -> Azure SQL Database
+```
+
+The backend is ready to run from Azure app settings. No connection strings or keys should be committed to the repository.
+
+Required API app settings:
+
+```text
+ConnectionStrings__FjordviaDatabase=<azure-sql-connection-string>
+ServiceBus__ConnectionString=<service-bus-connection-string>
+ServiceBus__InvoiceImportQueueName=invoice-imports
+Cors__AllowedOrigins__0=http://localhost:4200
+Database__EnsureCreatedOnStartup=true
+```
+
+`Database__EnsureCreatedOnStartup=true` is useful for a portfolio deployment to initialize an empty Azure SQL database. For a more production-like setup, replace this with EF Core migrations and remove the startup schema creation setting after the database exists.
+
+Required Function App settings:
+
+```text
+AzureWebJobsStorage=<function-storage-connection-string>
+FUNCTIONS_WORKER_RUNTIME=dotnet-isolated
+ServiceBus__ConnectionString=<service-bus-connection-string>
+ServiceBus__InvoiceImportQueueName=invoice-imports
+```
+
+### Azure Deployment Checklist
+
+- Resource Group
+- Azure SQL logical server and Azure SQL Database
+- Azure Service Bus namespace
+- Azure Service Bus queue, for example `invoice-imports`
+- Azure App Service Plan
+- Azure App Service for `Fjordvia.Api`
+- Storage Account for the Function App runtime
+- Azure Function App for `Fjordvia.Functions`
+- App settings configured with placeholders replaced in Azure only
+- Local Angular origin allowed through App Service CORS config/app settings
+
+### Example Azure CLI Commands
+
+These commands are examples only. Replace every placeholder before running them. Do not paste real secrets into source-controlled files.
+
+```powershell
+$resourceGroup = "<resource-group-name>"
+$location = "<azure-region>"
+$sqlServer = "<unique-sql-server-name>"
+$sqlDatabase = "fjordvia-db"
+$sqlAdmin = "<sql-admin-user>"
+$sqlPassword = "<sql-admin-password>"
+$serviceBusNamespace = "<unique-service-bus-namespace>"
+$queueName = "invoice-imports"
+$appServicePlan = "<app-service-plan-name>"
+$apiApp = "<unique-api-app-name>"
+$storageAccount = "<uniquestorageaccount>"
+$functionApp = "<unique-function-app-name>"
+
+az group create --name $resourceGroup --location $location
+
+az sql server create `
+  --resource-group $resourceGroup `
+  --name $sqlServer `
+  --location $location `
+  --admin-user $sqlAdmin `
+  --admin-password $sqlPassword
+
+az sql db create `
+  --resource-group $resourceGroup `
+  --server $sqlServer `
+  --name $sqlDatabase `
+  --service-objective Basic
+
+az servicebus namespace create `
+  --resource-group $resourceGroup `
+  --name $serviceBusNamespace `
+  --location $location `
+  --sku Basic
+
+az servicebus queue create `
+  --resource-group $resourceGroup `
+  --namespace-name $serviceBusNamespace `
+  --name $queueName
+
+az appservice plan create `
+  --resource-group $resourceGroup `
+  --name $appServicePlan `
+  --location $location `
+  --sku B1 `
+  --is-linux
+
+az webapp create `
+  --resource-group $resourceGroup `
+  --plan $appServicePlan `
+  --name $apiApp `
+  --runtime "DOTNETCORE:8.0"
+
+az storage account create `
+  --resource-group $resourceGroup `
+  --name $storageAccount `
+  --location $location `
+  --sku Standard_LRS
+
+az functionapp create `
+  --resource-group $resourceGroup `
+  --name $functionApp `
+  --storage-account $storageAccount `
+  --consumption-plan-location $location `
+  --runtime dotnet-isolated `
+  --functions-version 4
+```
+
+Configure the API app settings in Azure. Use values copied from Azure SQL and Service Bus, not placeholder text:
+
+```powershell
+az webapp config appsettings set `
+  --resource-group $resourceGroup `
+  --name $apiApp `
+  --settings `
+    ConnectionStrings__FjordviaDatabase="<azure-sql-connection-string>" `
+    ServiceBus__ConnectionString="<service-bus-connection-string>" `
+    ServiceBus__InvoiceImportQueueName=$queueName `
+    Cors__AllowedOrigins__0="http://localhost:4200" `
+    Database__EnsureCreatedOnStartup="true"
+```
+
+Configure the Function App settings:
+
+```powershell
+az functionapp config appsettings set `
+  --resource-group $resourceGroup `
+  --name $functionApp `
+  --settings `
+    ServiceBus__ConnectionString="<service-bus-connection-string>" `
+    ServiceBus__InvoiceImportQueueName=$queueName
+```
+
+Publish and deploy from local build outputs:
+
+```powershell
+dotnet publish src/Fjordvia.Api/Fjordvia.Api.csproj --configuration Release --output ./.publish/api
+dotnet publish functions/Fjordvia.Functions/Fjordvia.Functions.csproj --configuration Release --output ./.publish/functions
+```
+
+Deploy the published output with your preferred Azure workflow, such as GitHub Actions, Visual Studio publish, or `az webapp deploy` / `az functionapp deployment source config-zip` after packaging the publish folders.
+
+After deployment:
+
+```powershell
+.\scripts\smoke-test.ps1 -BaseUrl "https://<unique-api-app-name>.azurewebsites.net"
+```
+
+For local Angular against the deployed API, update `frontend/fjordvia-web/src/environments/environment.ts` locally to point `apiBaseUrl` at the App Service URL, then run `npm start`. Do not commit environment-specific API URLs unless you intentionally add a separate deployment environment file.
+
 ## Build and Test
 
 ```powershell
