@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Fjordvia.Api/Fjordvia.Api.csproj" />
+    <Project Path="src/Fjordvia.Core/Fjordvia.Core.csproj" />
+    <Project Path="src/Fjordvia.Infrastructure/Fjordvia.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Fjordvia.Tests/Fjordvia.Tests.csproj" />
+  </Folder>
+</Solution>
